@@ -39,10 +39,10 @@ class QueryView(Resource):
             val_2 = request.args["val_2"]
             file_name = request.args["file_name"]
         except Exception:
-            abort(404, message="invalid query")
+            abort(400, message="invalid query")
         path_file = os.path.join(DATA_DIR, file_name)
         if not os.path.exists(path_file):
-            abort(404, message="file not found")
+            abort(400, message="file not found")
 
         with open(path_file) as f:
             result = create_query(f, cmd_1, val_1)
