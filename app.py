@@ -1,23 +1,22 @@
 import os
-
+from flask_restx import Api, abort, Resource
 from flask import Flask,request
-from werkzeug.exceptions import BadRequest
+
 
 app = Flask(__name__)
+api = Api(app)
+my_ns = api.namespace("perform_query")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-# получить параметры query и file_name из request.args, при ошибке вернуть ошибку 400
-    # проверить, что файла file_name существует в папке DATA_DIR, при ошибке вернуть ошибку 400
-    # с помощью функционального программирования (функций filter, map), итераторов/генераторов сконструировать запрос
-    # вернуть пользователю сформированный результат
+
 
 def create_query(it, cmd, value):
     res = map(lambda x: x.strip(), it)
     if cmd == "filter":
         res = filter(lambda x: value in x, res)
     if cmd =="sort":
-        # value = bool(value)
+        value = bool(value)
         res = sorted(res, reverse=value)
     if cmd == "unique":
         res = set(res)
@@ -30,23 +29,28 @@ def create_query(it, cmd, value):
     return res
 
 
-@app.route("/perform_query")
-def perform_query():
-    try:
-        cmd_1 = request.args["cmd_1"]
-        cmd_2 = request.args["cmd_2"]
-        val_1 = request.args["val_1"]
-        val_2 = request.args["val_2"]
-        file_name = request.args["file_name"]
-    except KeyError:
-        raise BadRequest
-    path_file = os.path.join(DATA_DIR, file_name)
-    if not os.path.exists(path_file):
-        raise BadRequest
+@my_ns.route("/")
+class QueryView(Resource):
+    def get(self):
+        try:
+            cmd_1 = request.args["cmd_1"]
+            cmd_2 = request.args["cmd_2"]
+            val_1 = request.args["val_1"]
+            val_2 = request.args["val_2"]
+            file_name = request.args["file_name"]
+        except Exception:
+            abort(404, message="invalid query")
+        path_file = os.path.join(DATA_DIR, file_name)
+        if not os.path.exists(path_file):
+            abort(404, message="file not found")
 
-    with open(path_file) as f:
-        result = create_query(f, cmd_1, val_1)
-        result = create_query(result, cmd_2, val_2)
-        result = "\n".join(result)
+        with open(path_file) as f:
+            result = create_query(f, cmd_1, val_1)
+            result = create_query(result, cmd_2, val_2)
+            result = "\n".join(result)
 
-    return app.response_class(result, content_type="text/plain")
+        return app.response_class(result, content_type="text/plain")
+
+
+if __name__ == "__main__":
+    app.run(debug=False)
